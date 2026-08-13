@@ -1,0 +1,194 @@
+Select 'Products' As TableName, COUNT(*) As Records
+From Products UNION ALL 
+SELECT 'Customers', COUNT(*) FROM UNION ALL
+Select 'Sales', COUNT(*) From Sales UNION ALL
+Select'CustomerFeedback', COUNT(*) From Customer_feedback 
+
+Basic SQL Queries
+
+.....1.1 List all products in the Electronics category. Show ProductID, ProductName, and UnitPrice. Order by price from highest to lowest.
+
+Select ProductID, ProductName, UnitPrice
+FROM products
+WHERE category = 'Electronics'
+ORDER BY UnitPrice DESC
+
+.....1.2 How many customers are in each region? Show Region and the count of customers.
+
+SELECT Region, COUNT(*) AS customer_count
+FROM customers
+GROUP BY Region
+
+.....1.3 Show the 10 most recent orders. Display OrderID, OrderDate, and TotalSales.
+
+SELECT OrderID, OrderDate, TotalSales
+FROM sales
+ORDER BY OrderDate DESC
+LIMIT 10
+
+..... 1.4 Find all products with a UnitPrice less than R1000. Show ProductName, Category, and UnitPrice.
+
+select productID, ProductName, Category, UnitPrice
+from products
+where UnitPrice <1000
+
+..... 1.5 Count how many feedback responses exist for each Satisfaction level. Order by count descending.
+
+SELECT Satisfaction, COUNT(*) AS feedback_count
+FROM customer_feedback
+GROUP BY Satisfaction
+ORDER BY feedback_count DESC
+
+Intermediate SQL Queries
+
+..... 2.1 Calculate total sales revenue for each product category. Show Category, Total Revenue, and Total Profit. Order by revenue descending.
+
+SELECT p.Category AS Category,
+ROUND(SUM(s.TotalSales),2) AS Total_Revenue,
+ROUND(SUM(s.Profit),2) AS Total_Profit
+FROM sales AS s
+JOIN products AS p ON s.ProductID = p.ProductID
+GROUP BY p.Category
+ORDER BY Total_Revenue DESC
+
+..... 2.2 Find the top 5 customers by total purchase amount. Show CustomerID, Customer Name (FirstName + LastName), and Total Spent. Hint: Use CONCAT or + to combine names.
+
+SELECT c.CustomerID,CONCAT(c.FirstName, ' ', c.LastName) AS Customer_Name,SUM(s.TotalSales) AS Total_Spent
+FROM sales AS s
+JOIN customers AS c ON s.CustomerID = c.CustomerID
+GROUP BY c.CustomerID, c.FirstName, c.LastName
+ORDER BY Total_Spent DESC
+LIMIT 5
+
+..... 2.3 Show total sales by month for 2024. Display Year, Month (as number), and Total Sales. Order chronologically.
+
+SELECT YEAR(OrderDate) AS Year,MONTH(OrderDate) AS Month,SUM(TotalSales) AS Total_Sales
+FROM sales
+WHERE OrderDate BETWEEN '2024-01-01' AND '2024-12-31'
+GROUP BY YEAR(OrderDate), MONTH(OrderDate)
+ORDER BY Year, Month ASC
+
+..... 2.4 Compare Online vs Store performance. Show Channel, Number of Orders, Average Order Value, and Total Revenue.
+
+SELECT Channel,COUNT(OrderID) AS Order_Number,AVG(TotalSales) AS Average_Order_Value,SUM(TotalSales) AS Total_Revenue
+FROM sales
+GROUP BY Channel
+ORDER BY Total_Revenue DESC 
+
+..... 2.5 For each product category, show the average customer rating. Include Category, Average Rating, and Number of Reviews. Only show categories with at least 50 reviews.
+
+SELECT ProductCategory AS Category,AVG(Rating) AS Average_Rating,COUNT(FeedbackID) AS Number_Of_Reviews
+FROM customer_feedback
+GROUP BY ProductCategory
+HAVING COUNT(FeedbackID) >= 50
+
+
+Advanced SQL Queries
+
+..... 3.1 Find the product with the highest total sales in each category. Show Category, ProductName, and Total Revenue for that product. Use a window function or subquery.
+
+WITH RankedProducts AS (
+    SELECT p.Category, p.ProductName, SUM(s.TotalSales) AS Total_Revenue, RANK() OVER (PARTITION BY p.Category ORDER BY SUM(s.TotalSales) DESC) AS rank
+    FROM sales AS s
+    JOIN products AS p ON s.ProductID = p.ProductID
+    GROUP BY p.Category, p.ProductName
+)
+SELECT Category, ProductName, Total_Revenue
+FROM RankedProducts
+WHERE rank = 1
+ORDER BY Total_Revenue DESC
+
+..... 3.2 Create a query showing each customer's total purchases, number of orders, and average order value. Also include their region and primary channel. Only show customers with more than 3 orders. Order by total purchases descending.
+
+SELECT c.CustomerID, c.Region, c.Channel, SUM(s.TotalSales) AS Total_Purchases, COUNT(s.OrderID) AS Number_Of_Orders, AVG(s.TotalSales) AS Avg_Order_Value
+FROM sales AS s
+JOIN customers AS c ON s.CustomerID = c.CustomerID
+GROUP BY c.CustomerID, c.Region, c.Channel
+HAVING COUNT(s.OrderID) > 3
+ORDER BY Total_Purchases DESC
+
+..... 3.3 Calculate the profit margin percentage for each product. Show ProductName, Category, Total Sales, Total Profit, and Profit Margin %. Order by profit margin descending. Formula: (Profit / Sales) * 100
+
+SELECT p.ProductName,p.Category,SUM(s.TotalSales) AS TotalSales, SUM(s.Profit) AS TotalProfit, ROUND((SUM(s.Profit) / SUM(s.TotalSales)) * 100, 2) AS Profit_Margin_Percentage
+FROM sales AS s
+JOIN products AS p ON s.ProductID = p.ProductID
+GROUP BY p.ProductName, p.Category
+ORDER BY Profit_Margin_Percentage DESC
+
+..... 3.4 Compare sales between 2023 and 2024. Show the total sales for each year and calculate the growth percentage. Use a CTE or subquery.
+WITH 
+sales_2023 AS (
+  SELECT SUM(TotalSales) AS TotalSales2023
+  FROM sales
+  WHERE YEAR(OrderDate) = 2023), 
+sales_2024 AS (
+  SELECT SUM(TotalSales) AS TotalSales2024
+  FROM sales
+  WHERE YEAR(OrderDate) = 2024)
+SELECT 
+  ROUND(s3.TotalSales2023, 2) AS TotalSales2023, 
+  ROUND(s4.TotalSales2024, 2) AS TotalSales2024, 
+  ROUND(((s4.TotalSales2024 - s3.TotalSales2023) / s3.TotalSales2023) * 100, 2) AS GrowthPercentage
+FROM sales_2023 s3, sales_2024 s4
+
+.....3.5 Rank regions by total sales. Use the RANK() or ROW_NUMBER() window function. Show Region, Total Sales, Total Orders, and Rank.
+
+SELECT c.Region, SUM(s.TotalSales) AS Total_Sales, COUNT(s.OrderID) AS Total_Orders,RANK() OVER (ORDER BY SUM(s.TotalSales) DESC) AS Rank
+FROM sales AS s
+JOIN customers AS c ON s.CustomerID = c.CustomerID
+GROUP BY c.Region
+ORDER BY Rank ASC
+
+Business Intelligence Questions
+
+.....4.1 Analyze whether highly satisfied customers (rating 4-5) make more repeat purchases than less satisfied customers (rating 1-3). Show satisfaction level groups, average number of orders per customer, and total customers in each group.
+
+WITH CustomerSatisfaction AS (
+SELECT CustomerID, AVG(Rating) AS avg_customer_rating, 
+    CASE 
+            WHEN AVG(Rating) >= 4 THEN 'Highly Satisfied (4-5)'
+            WHEN AVG(Rating) >= 1 AND AVG(Rating) < 4 THEN 'Less Satisfied (1-3)'
+            ELSE 'No Rating Data'
+    END AS satisfaction_level
+    FROM customer_feedback
+    GROUP BY CustomerID
+),
+CustomerOrderCounts AS (
+    SELECT CustomerID, COUNT(DISTINCT OrderID) AS total_orders
+    FROM sales
+    GROUP BY CustomerID
+)
+SELECT s.satisfaction_level, COUNT(DISTINCT s.CustomerID) AS total_customers, ROUND(AVG(o.total_orders), 2) AS avg_orders_per_customer
+FROM CustomerSatisfaction s
+JOIN CustomerOrderCounts o 
+    ON s.CustomerID = o.CustomerID
+WHERE s.satisfaction_level IN ('Highly Satisfied (4-5)', 'Less Satisfied (1-3)')
+GROUP BY s.satisfaction_level
+ORDER BY avg_orders_per_customer DESC
+
+.....4.2 Examine the relationship between discount percentage and profit. Create discount bands (0%, 1-10%, 11-20%, 21-30%) and show total sales, total profit, and profit margin for each band.
+
+WITH discount_bands AS (
+SELECT *,
+CASE 
+            WHEN DiscountPercent = 0 THEN '0%'
+            WHEN DiscountPercent BETWEEN 11 AND 20 THEN '11-20%'
+            WHEN DiscountPercent BETWEEN 21 AND 30 THEN '21-30%'
+END AS discount_band
+FROM sales
+)
+SELECT discount_band,SUM(TotalSales) AS total_sales, SUM(Profit) AS total_profit, ROUND(SUM(Profit) / NULLIF(SUM(TotalSales), 0) * 100, 2) AS profit_margin_percentage
+FROM discount_bands
+GROUP BY discount_band
+ORDER BY profit_margin_percentage DESC
+
+..... 4.3 Identify underperforming products (bottom 5 by total revenue) and analyze whether they should be discontinued. Consider sales volume, profit margin, and customer ratings.
+
+SELECT p.ProductID, p.ProductName, SUM(s.Quantity) AS total_sales_volume, SUM(s.Quantity * s.UnitPrice) AS total_revenue, ROUND((p.UnitPrice - p.CostPrice) / NULLIF(p.UnitPrice, 0) * 100, 2) AS avg_profit_margin, AVG(r.Rating) AS avg_customer_rating
+FROM products p
+JOIN sales s ON p.ProductID = s.ProductID
+LEFT JOIN customer_feedback r ON p.ProductID = r.ProductCategory
+GROUP BY p.ProductID, p.ProductName, p.UnitPrice, p.CostPrice
+ORDER BY total_revenue ASC
+LIMIT 5
+
